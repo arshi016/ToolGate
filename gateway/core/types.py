@@ -42,6 +42,8 @@ class ToolErrorType(str, Enum):
 
 
 class ToolContext(BaseModel):
+    """Execution context for a tool request."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     session_id: StrictStr
@@ -53,6 +55,8 @@ class ToolContext(BaseModel):
 
 
 class ToolRequest(BaseModel):
+    """Normalized tool request with context and arguments."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     tool_name: StrictStr
@@ -62,6 +66,8 @@ class ToolRequest(BaseModel):
 
 
 class ToolError(BaseModel):
+    """Error payload for tool execution or policy blocks."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     error_type: ToolErrorType
@@ -71,6 +77,8 @@ class ToolError(BaseModel):
 
 
 class ToolResult(BaseModel):
+    """Result wrapper for tool execution outcomes."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     ok: StrictBool
@@ -79,6 +87,8 @@ class ToolResult(BaseModel):
 
 
 class ToolSpec(BaseModel):
+    """Static tool capabilities and scope metadata."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     tool_name: StrictStr

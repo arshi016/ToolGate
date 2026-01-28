@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from gateway.core.types import ActionType, Decision, PolicyDecision, RiskLevel, ToolRequest
+from gateway.core.types import (
+    ActionType,
+    Decision,
+    PolicyDecision,
+    RiskLevel,
+    ToolRequest,
+)
 
 
 class InjectionFilter:
@@ -18,7 +24,9 @@ class InjectionFilter:
         "override policy",
     )
 
-    def inspect(self, request: ToolRequest) -> tuple[bool, ToolRequest | PolicyDecision]:
+    def inspect(
+        self, request: ToolRequest
+    ) -> tuple[bool, ToolRequest | PolicyDecision]:
         """Inspect a request and block if suspicious patterns are found."""
         if self._contains_suspicious_pattern(request.args):
             return False, self._blocked_decision()
@@ -27,6 +35,7 @@ class InjectionFilter:
         return True, request
 
     def _blocked_decision(self) -> PolicyDecision:
+        """Return a policy decision that blocks the request."""
         return PolicyDecision(
             decision=Decision.BLOCK,
             action_type=ActionType.WRITE,
@@ -36,6 +45,7 @@ class InjectionFilter:
         )
 
     def _contains_suspicious_pattern(self, args: dict[str, Any]) -> bool:
+        """Return True if args include injection patterns."""
         patterns = [value.lower() for value in self._SUSPICIOUS_PATTERNS]
         for text in self._iter_string_values(args):
             lowered = text.lower()
@@ -44,6 +54,7 @@ class InjectionFilter:
         return False
 
     def _url_contains_secrets(self, args: dict[str, Any]) -> bool:
+        """Return True if a URL arg contains secret-like tokens."""
         for key, value in self._iter_items(args):
             if not isinstance(value, str):
                 continue
@@ -55,6 +66,7 @@ class InjectionFilter:
         return False
 
     def _iter_items(self, payload: Any) -> Iterable[tuple[str, Any]]:
+        """Yield nested key/value pairs from args."""
         if isinstance(payload, dict):
             for key, value in payload.items():
                 if isinstance(key, str):
@@ -65,6 +77,7 @@ class InjectionFilter:
                 yield from self._iter_items(item)
 
     def _iter_string_values(self, payload: Any) -> Iterable[str]:
+        """Yield all string values from nested structures."""
         if isinstance(payload, str):
             yield payload
             return

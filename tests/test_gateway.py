@@ -5,8 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from gateway.adapters import CalendarMockAdapter, EmailMockAdapter, FileSystemMockAdapter
-from gateway.core.approval import ApprovalGate, ApprovalRequest, ApprovalToken
+from gateway.adapters import (
+    CalendarMockAdapter,
+    EmailMockAdapter,
+    FileSystemMockAdapter,
+)
+from gateway.core.approval import ApprovalGate, ApprovalRequest
 from gateway.core.control_layer import ControlLayer
 from gateway.core.types import ActionType, ToolContext, ToolErrorType
 
@@ -15,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _context() -> ToolContext:
+    """Return a baseline ToolContext for tests."""
     return ToolContext(
         session_id="test-session",
         task_id="test-task",
@@ -25,7 +30,10 @@ def _context() -> ToolContext:
     )
 
 
-def _control_layer(tmp_path: Path, profile: str, monkeypatch: pytest.MonkeyPatch) -> ControlLayer:
+def _control_layer(
+    tmp_path: Path, profile: str, monkeypatch: pytest.MonkeyPatch
+) -> ControlLayer:
+    """Build a ControlLayer with mock adapters and a temp receipts log."""
     monkeypatch.setenv("GATEWAY_SECRET", "test-secret")
     receipts_path = tmp_path / "receipts.log"
     control = ControlLayer(profile_path=profile, receipts_path=str(receipts_path))
@@ -36,6 +44,7 @@ def _control_layer(tmp_path: Path, profile: str, monkeypatch: pytest.MonkeyPatch
 
 
 def _read_receipts(path: Path) -> list[dict]:
+    """Parse JSONL receipt entries from a log file."""
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
@@ -50,13 +59,19 @@ def test_classification() -> None:
 
 
 def test_approval_flow_strict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    control = _control_layer(tmp_path, str(ROOT / "configs/policy_strict.yaml"), monkeypatch)
+    control = _control_layer(
+        tmp_path, str(ROOT / "configs/policy_strict.yaml"), monkeypatch
+    )
     context = _context()
 
     result = control.call_tool(
         "calendar",
         "create_event",
-        {"title": "Demo", "start": "2026-01-28T09:00:00Z", "end": "2026-01-28T10:00:00Z"},
+        {
+            "title": "Demo",
+            "start": "2026-01-28T09:00:00Z",
+            "end": "2026-01-28T10:00:00Z",
+        },
         context,
     )
     assert result.ok is False
@@ -73,7 +88,11 @@ def test_approval_flow_strict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     result = control.call_tool(
         "calendar",
         "create_event",
-        {"title": "Demo", "start": "2026-01-28T09:00:00Z", "end": "2026-01-28T10:00:00Z"},
+        {
+            "title": "Demo",
+            "start": "2026-01-28T09:00:00Z",
+            "end": "2026-01-28T10:00:00Z",
+        },
         approved_context,
     )
     assert result.ok is True
@@ -93,7 +112,11 @@ def test_approval_flow_strict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     result = control.call_tool(
         "calendar",
         "create_event",
-        {"title": "Demo", "start": "2026-01-28T09:00:00Z", "end": "2026-01-28T10:00:00Z"},
+        {
+            "title": "Demo",
+            "start": "2026-01-28T09:00:00Z",
+            "end": "2026-01-28T10:00:00Z",
+        },
         expired_context,
     )
     assert result.ok is False
@@ -101,8 +124,12 @@ def test_approval_flow_strict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert result.error.error_type == ToolErrorType.INVALID_APPROVAL
 
 
-def test_practical_profile_email_draft_and_send(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    control = _control_layer(tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch)
+def test_practical_profile_email_draft_and_send(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    control = _control_layer(
+        tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch
+    )
     context = _context()
 
     result = control.call_tool(
@@ -124,8 +151,12 @@ def test_practical_profile_email_draft_and_send(tmp_path: Path, monkeypatch: pyt
     assert result.error.error_type == ToolErrorType.CONFIRMATION_REQUIRED
 
 
-def test_broad_read_receipt_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    control = _control_layer(tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch)
+def test_broad_read_receipt_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    control = _control_layer(
+        tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch
+    )
     context = _context()
 
     result = control.call_tool(
@@ -143,7 +174,9 @@ def test_broad_read_receipt_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 
 def test_receipts_privacy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    control = _control_layer(tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch)
+    control = _control_layer(
+        tmp_path, str(ROOT / "configs/policy_practical.yaml"), monkeypatch
+    )
     context = _context()
 
     control.call_tool(

@@ -43,6 +43,7 @@ class EmailMockAdapter:
         self._draft_counter = 1
 
     def spec(self) -> ToolSpec:
+        """Return the tool specification for the email adapter."""
         return ToolSpec(
             tool_name="email",
             description="Deterministic mock email adapter.",
@@ -58,9 +59,11 @@ class EmailMockAdapter:
         )
 
     def supports_scope(self, scope: str) -> bool:
+        """Return True if the scope is supported."""
         return scope in self.spec().read_scopes
 
     def execute(self, request: ToolRequest, scope: Optional[str]) -> ToolResult:
+        """Dispatch the requested action."""
         if request.tool_action == "search":
             return self._search(request.args, scope)
         if request.tool_action == "get_headers":
@@ -80,6 +83,7 @@ class EmailMockAdapter:
         )
 
     def _search(self, args: Dict[str, Any], scope: Optional[str]) -> ToolResult:
+        """Search messages and apply the read scope."""
         scope = scope or self.spec().default_read_scope
         if not self.supports_scope(scope):
             return self._unsupported_scope(scope)
@@ -92,6 +96,7 @@ class EmailMockAdapter:
         return ToolResult(ok=True, data={"messages": results})
 
     def _get_headers(self, args: Dict[str, Any], scope: Optional[str]) -> ToolResult:
+        """Fetch a single message by id and apply scope."""
         scope = scope or self.spec().default_read_scope
         if not self.supports_scope(scope):
             return self._unsupported_scope(scope)
@@ -110,6 +115,7 @@ class EmailMockAdapter:
         )
 
     def _create_draft(self, args: Dict[str, Any]) -> ToolResult:
+        """Create an in-memory draft message."""
         draft = {
             "id": f"draft_{self._draft_counter}",
             "to": args.get("to"),
@@ -121,8 +127,13 @@ class EmailMockAdapter:
         return ToolResult(ok=True, data={"draft_id": draft["id"], "status": "drafted"})
 
     def _apply_scope(self, message: Dict[str, Any], scope: str) -> Dict[str, Any]:
+        """Return message fields according to scope."""
         if scope == "headers_only":
-            return {"id": message["id"], "subject": message["subject"], "from": message["from"]}
+            return {
+                "id": message["id"],
+                "subject": message["subject"],
+                "from": message["from"],
+            }
         return {
             "id": message["id"],
             "subject": message["subject"],
@@ -131,6 +142,7 @@ class EmailMockAdapter:
         }
 
     def _matches_query(self, message: Dict[str, Any], query: str) -> bool:
+        """Return True if query matches message fields."""
         return (
             query in message["subject"].lower()
             or query in message["from"].lower()
@@ -138,6 +150,7 @@ class EmailMockAdapter:
         )
 
     def _unsupported_scope(self, scope: str) -> ToolResult:
+        """Return an error for unsupported scope requests."""
         return ToolResult(
             ok=False,
             error=ToolError(

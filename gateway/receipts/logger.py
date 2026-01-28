@@ -37,6 +37,7 @@ class ReceiptLogger:
     def _contains_forbidden_key(
         self, payload: Dict[str, Any], forbidden: set[str]
     ) -> bool:
+        """Return True if forbidden keys appear in nested payload."""
         for key, value in payload.items():
             if key in forbidden:
                 return True

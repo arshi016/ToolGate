@@ -9,7 +9,11 @@ from typing import Any, Dict, Optional
 
 import typer
 
-from gateway.adapters import CalendarMockAdapter, EmailMockAdapter, FileSystemMockAdapter
+from gateway.adapters import (
+    CalendarMockAdapter,
+    EmailMockAdapter,
+    FileSystemMockAdapter,
+)
 from gateway.core.approval import ApprovalGate, ApprovalRequest
 from gateway.core.control_layer import ControlLayer
 from gateway.core.types import ToolContext, ToolResult
@@ -20,6 +24,7 @@ _DEV_SECRET = "dev-secret-change-me"
 
 
 def _ensure_secret() -> str:
+    """Return the configured secret, setting a demo default if missing."""
     secret = os.getenv("GATEWAY_SECRET")
     if not secret:
         os.environ["GATEWAY_SECRET"] = _DEV_SECRET
@@ -33,10 +38,15 @@ def _ensure_secret() -> str:
 
 
 def _print_result(label: str, result: ToolResult, receipts_path: str) -> None:
+    """Print a tool result and approval instructions if needed."""
     typer.secho(f"\n== {label} ==", fg=typer.colors.CYAN)
     typer.echo(json.dumps(result.model_dump(), indent=2, sort_keys=True))
     typer.echo(f"Receipts log: {receipts_path}")
-    if result.error and result.error.details and "approval_request" in result.error.details:
+    if (
+        result.error
+        and result.error.details
+        and "approval_request" in result.error.details
+    ):
         approval_request = result.error.details["approval_request"]
         typer.secho("\nApproval required. To approve:", fg=typer.colors.YELLOW)
         typer.echo(json.dumps(approval_request, indent=2, sort_keys=True))
@@ -48,6 +58,7 @@ def _print_result(label: str, result: ToolResult, receipts_path: str) -> None:
 
 
 def _base_context() -> ToolContext:
+    """Return a default demo context."""
     return ToolContext(
         session_id="demo-session",
         task_id="demo-task",
@@ -56,12 +67,6 @@ def _base_context() -> ToolContext:
         timestamp="2026-01-28T00:00:00Z",
         policy_state={},
     )
-
-
-def _attach_approval(context: ToolContext, token: Dict[str, Any]) -> ToolContext:
-    updated = context.model_copy(deep=True)
-    updated.policy_state["approval_token"] = token
-    return updated
 
 
 @app.command()
@@ -85,15 +90,17 @@ def run(
     context = _base_context()
 
     # 1) Calendar scheduling attempt: get_free_busy then create_event.
-    result = control.call_tool(
-        "calendar", "get_free_busy", args={}, context=context
-    )
+    result = control.call_tool("calendar", "get_free_busy", args={}, context=context)
     _print_result("Scenario 1a: calendar.get_free_busy", result, receipts_path)
 
     result = control.call_tool(
         "calendar",
         "create_event",
-        args={"title": "Demo", "start": "2026-01-28T09:00:00Z", "end": "2026-01-28T10:00:00Z"},
+        args={
+            "title": "Demo",
+            "start": "2026-01-28T09:00:00Z",
+            "end": "2026-01-28T10:00:00Z",
+        },
         context=context,
     )
     _print_result("Scenario 1b: calendar.create_event", result, receipts_path)
@@ -130,7 +137,7 @@ def run(
 def approve(
     input_file: Optional[str] = typer.Option(
         None, "--input-file", help="Path to ApprovalRequest JSON."
-    )
+    ),
 ) -> None:
     """Generate an approval_token from ApprovalRequest JSON."""
     secret = _ensure_secret()
@@ -140,11 +147,12 @@ def approve(
     token = gate.sign(approval_request)
     typer.echo(json.dumps(token.model_dump(), indent=2, sort_keys=True))
     typer.echo(
-        "Paste this JSON into context.policy_state[\"approval_token\"] and re-run."
+        'Paste this JSON into context.policy_state["approval_token"] and re-run.'
     )
 
 
 def _read_input(input_file: Optional[str]) -> Dict[str, Any]:
+    """Read JSON data from a file path or stdin."""
     if input_file:
         data = _read_file(input_file)
     else:
@@ -158,6 +166,7 @@ def _read_input(input_file: Optional[str]) -> Dict[str, Any]:
 
 
 def _read_file(path: str) -> str:
+    """Return file contents as text."""
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
 

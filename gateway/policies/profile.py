@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, Strict
 
 
 class ToolPolicy(BaseModel):
+    """Per-tool policy settings."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     read_default_scope: StrictStr = ""
@@ -19,6 +21,8 @@ class ToolPolicy(BaseModel):
 
 
 class GlobalPolicy(BaseModel):
+    """Global policy thresholds for read breadth."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     broad_read_range_days_threshold: StrictInt = 30
@@ -26,6 +30,8 @@ class GlobalPolicy(BaseModel):
 
 
 class PolicyProfile(BaseModel):
+    """Policy profile parsed from YAML."""
+
     model_config = ConfigDict(extra="forbid", strict=True)
 
     profile: StrictStr

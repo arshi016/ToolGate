@@ -56,6 +56,7 @@ class ApprovalGate:
         self._ttl_seconds = ttl_seconds or self._DEFAULT_TTL_SECONDS
 
     def create_approval_request(self, request: ToolRequest) -> ApprovalRequest:
+        """Create a new approval request for a tool call."""
         canonical_args = canonicalize_args(request.args)
         request_id = uuid.uuid4().hex
         expires_at = self._expires_at()
@@ -70,6 +71,7 @@ class ApprovalGate:
         )
 
     def sign(self, approval_request: ApprovalRequest) -> ApprovalToken:
+        """Sign an approval request and return an approval token."""
         signature = self._sign_payload(
             approval_request.request_id,
             approval_request.canonical_args,
@@ -82,10 +84,13 @@ class ApprovalGate:
         )
 
     def verify(self, token: ApprovalToken, request: ToolRequest) -> bool:
+        """Verify a token matches the request and is not expired."""
         if self._is_expired(token.expires_at):
             return False
         canonical_args = canonicalize_args(request.args)
-        expected = self._sign_payload(token.request_id, canonical_args, token.expires_at)
+        expected = self._sign_payload(
+            token.request_id, canonical_args, token.expires_at
+        )
         return hmac.compare_digest(token.signature, expected)
 
     def invalid_approval_error(self, reason: str) -> ToolError:
@@ -97,21 +102,27 @@ class ApprovalGate:
             details={"reason": reason},
         )
 
-    def _sign_payload(self, request_id: str, canonical_args: str, expires_at: str) -> str:
+    def _sign_payload(
+        self, request_id: str, canonical_args: str, expires_at: str
+    ) -> str:
+        """Compute HMAC signature for approval payload fields."""
         payload = f"{request_id}:{canonical_args}:{expires_at}".encode("utf-8")
         return hmac.new(self._secret, payload, "sha256").hexdigest()
 
     def _expires_at(self) -> str:
+        """Return an RFC3339 timestamp string in UTC."""
         timestamp = datetime.now(timezone.utc) + timedelta(seconds=self._ttl_seconds)
         return timestamp.isoformat(timespec="seconds").replace("+00:00", "Z")
 
     def _is_expired(self, expires_at: str) -> bool:
+        """Return True if the provided timestamp is expired."""
         parsed = self._parse_timestamp(expires_at)
         if parsed is None:
             return True
         return parsed <= datetime.now(timezone.utc)
 
     def _parse_timestamp(self, value: str) -> Optional[datetime]:
+        """Parse an ISO-8601 timestamp into a timezone-aware datetime."""
         try:
             if value.endswith("Z"):
                 value = value[:-1] + "+00:00"

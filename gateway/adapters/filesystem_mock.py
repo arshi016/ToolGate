@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from gateway.core.types import (
     ActionType,
@@ -23,6 +23,7 @@ class FileSystemMockAdapter:
         self._base_dir.mkdir(parents=True, exist_ok=True)
 
     def spec(self) -> ToolSpec:
+        """Return the tool specification for the filesystem adapter."""
         return ToolSpec(
             tool_name="files",
             description="Deterministic mock filesystem adapter.",
@@ -38,9 +39,11 @@ class FileSystemMockAdapter:
         )
 
     def supports_scope(self, scope: str) -> bool:
+        """Return True if the scope is supported."""
         return scope in self.spec().read_scopes
 
     def execute(self, request: ToolRequest, scope: Optional[str]) -> ToolResult:
+        """Dispatch the requested action."""
         if request.tool_action == "list_dir":
             return self._list_dir(request.args)
         if request.tool_action == "read_file":
@@ -60,6 +63,7 @@ class FileSystemMockAdapter:
         )
 
     def _list_dir(self, args: Dict[str, Any]) -> ToolResult:
+        """List entries in a directory."""
         try:
             target = self._resolve_path(args.get("path", "."))
         except ValueError as exc:
@@ -67,9 +71,12 @@ class FileSystemMockAdapter:
         if not target.exists() or not target.is_dir():
             return self._path_error("Directory not found.")
         entries = sorted(path.name for path in target.iterdir())
-        return ToolResult(ok=True, data={"path": self._relative(target), "entries": entries})
+        return ToolResult(
+            ok=True, data={"path": self._relative(target), "entries": entries}
+        )
 
     def _read_file(self, args: Dict[str, Any], scope: Optional[str]) -> ToolResult:
+        """Read a file with the requested scope."""
         scope = scope or self.spec().default_read_scope
         if not self.supports_scope(scope):
             return self._unsupported_scope(scope)
@@ -90,6 +97,7 @@ class FileSystemMockAdapter:
         )
 
     def _write_file(self, args: Dict[str, Any]) -> ToolResult:
+        """Write content to a file in the mock filesystem."""
         try:
             target = self._resolve_path(args.get("path"))
         except ValueError as exc:
@@ -107,6 +115,7 @@ class FileSystemMockAdapter:
         )
 
     def _delete_file(self, args: Dict[str, Any]) -> ToolResult:
+        """Delete a file in the mock filesystem."""
         try:
             target = self._resolve_path(args.get("path"))
         except ValueError as exc:
@@ -114,9 +123,12 @@ class FileSystemMockAdapter:
         if not target.exists() or not target.is_file():
             return self._path_error("File not found.")
         target.unlink()
-        return ToolResult(ok=True, data={"path": self._relative(target), "status": "deleted"})
+        return ToolResult(
+            ok=True, data={"path": self._relative(target), "status": "deleted"}
+        )
 
     def _resolve_path(self, path_value: Any) -> Path:
+        """Resolve a user-supplied path within the base directory."""
         if not path_value:
             raise ValueError("Path is required.")
         path = Path(str(path_value))
@@ -128,9 +140,11 @@ class FileSystemMockAdapter:
         return resolved
 
     def _relative(self, path: Path) -> str:
+        """Return path relative to the adapter base directory."""
         return str(path.relative_to(self._base_dir))
 
     def _unsupported_scope(self, scope: str) -> ToolResult:
+        """Return an error for unsupported scope requests."""
         return ToolResult(
             ok=False,
             error=ToolError(
@@ -142,6 +156,7 @@ class FileSystemMockAdapter:
         )
 
     def _path_error(self, message: str) -> ToolResult:
+        """Return an error for invalid filesystem paths."""
         return ToolResult(
             ok=False,
             error=ToolError(

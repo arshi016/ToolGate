@@ -27,7 +27,6 @@ from gateway.core.types import (
     ToolErrorType,
     ToolRequest,
     ToolResult,
-    ToolSpec,
 )
 from gateway.policies.policy_engine import PolicyEngine
 from gateway.policies.profile import PolicyProfile, load_profile
@@ -42,7 +41,9 @@ logger = logging.getLogger(__name__)
 class ControlLayer:
     """Policy-enforced gateway for tool calls."""
 
-    def __init__(self, profile_path: str, receipts_path: str = "./receipts.log") -> None:
+    def __init__(
+        self, profile_path: str, receipts_path: str = "./receipts.log"
+    ) -> None:
         if load_dotenv is not None:
             load_dotenv()
         secret_value = os.getenv("GATEWAY_SECRET")
@@ -50,9 +51,7 @@ class ControlLayer:
             secret = secret_value.encode("utf-8")
         else:
             secret = secrets.token_bytes(32)
-            logger.warning(
-                "GATEWAY_SECRET not set. Using an insecure dev secret!"
-            )
+            logger.warning("GATEWAY_SECRET not set. Using an insecure dev secret!")
 
         self._secret = secret
         self._profile: PolicyProfile = load_profile(profile_path)
@@ -63,11 +62,17 @@ class ControlLayer:
         self._approval_gate = ApprovalGate(secret=secret)
 
     def register_adapter(self, adapter: ToolAdapter) -> None:
+        """Register a tool adapter with the registry."""
         self._registry.register(adapter)
 
     def call_tool(
-        self, tool_name: str, tool_action: str, args: Dict[str, Any], context: ToolContext
+        self,
+        tool_name: str,
+        tool_action: str,
+        args: Dict[str, Any],
+        context: ToolContext,
     ) -> ToolResult:
+        """Execute a tool call through the policy and security pipeline."""
         request = ToolRequest(
             tool_name=tool_name, tool_action=tool_action, args=args, context=context
         )
@@ -212,7 +217,10 @@ class ControlLayer:
         )
         return result
 
-    def _approval_token_from_context(self, context: ToolContext) -> Optional[ApprovalToken]:
+    def _approval_token_from_context(
+        self, context: ToolContext
+    ) -> Optional[ApprovalToken]:
+        """Extract an approval token from the tool context."""
         token_data = context.policy_state.get("approval_token")
         if not isinstance(token_data, dict):
             return None
@@ -222,6 +230,7 @@ class ControlLayer:
             return None
 
     def _confirmed_decision(self, decision: PolicyDecision) -> PolicyDecision:
+        """Return a decision representing verified confirmation."""
         confirmed_decision = (
             Decision.ALLOW_WITH_REDACTIONS
             if decision.action_type == ActionType.READ
@@ -248,6 +257,7 @@ class ControlLayer:
         scope_applied: Optional[str],
         result_summary: str,
     ) -> None:
+        """Emit a receipt event for a tool attempt."""
         receipt = ReceiptEvent(
             receipt_id=uuid.uuid4().hex,
             timestamp=self._utc_now(),
@@ -269,6 +279,7 @@ class ControlLayer:
         self._receipt_logger.log_event(receipt)
 
     def _arg_fingerprint(self, args: Dict[str, Any]) -> str:
+        """Return a stable HMAC fingerprint for request args."""
         try:
             canonical = canonicalize_args(args)
         except (TypeError, ValueError):
@@ -276,6 +287,7 @@ class ControlLayer:
         return hmac_fingerprint(self._secret, canonical)
 
     def _result_summary(self, result: ToolResult) -> str:
+        """Return a minimal result summary for receipts."""
         if result.ok:
             return "ok"
         if result.error is None:
@@ -283,6 +295,9 @@ class ControlLayer:
         return f"error:{result.error.error_type.value}"
 
     def _utc_now(self) -> str:
-        return datetime.now(timezone.utc).isoformat(timespec="seconds").replace(
-            "+00:00", "Z"
+        """Return the current UTC time as RFC3339."""
+        return (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
         )

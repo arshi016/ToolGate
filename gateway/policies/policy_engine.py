@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable
 
-from gateway.core.types import ActionType, Decision, PolicyDecision, RiskLevel, ToolRequest, ToolSpec
+from gateway.core.types import (
+    ActionType,
+    Decision,
+    PolicyDecision,
+    RiskLevel,
+    ToolRequest,
+    ToolSpec,
+)
 from gateway.policies.profile import PolicyProfile, ToolPolicy
 
 
@@ -15,6 +22,7 @@ class PolicyEngine:
         self._profile = profile
 
     def decide(self, request: ToolRequest, spec: ToolSpec) -> PolicyDecision:
+        """Evaluate a tool request against the profile."""
         action_type = spec.actions.get(request.tool_action)
         if action_type is None:
             return PolicyDecision(
@@ -30,8 +38,11 @@ class PolicyEngine:
 
         if action_type == ActionType.READ:
             scope_applied = tool_policy.read_default_scope or spec.default_read_scope
-            if self._is_broad_read(request.args, global_policy.broad_read_keywords,
-                                   global_policy.broad_read_range_days_threshold):
+            if self._is_broad_read(
+                request.args,
+                global_policy.broad_read_keywords,
+                global_policy.broad_read_range_days_threshold,
+            ):
                 return PolicyDecision(
                     decision=Decision.REQUIRE_CONFIRM,
                     action_type=action_type,
@@ -81,6 +92,7 @@ class PolicyEngine:
         keywords: Iterable[str],
         range_threshold_days: int,
     ) -> bool:
+        """Return True if args indicate a broad read request."""
         if self._contains_keyword(args, keywords):
             return True
         range_days = args.get("range_days")
@@ -91,6 +103,7 @@ class PolicyEngine:
         return False
 
     def _contains_keyword(self, args: Dict[str, Any], keywords: Iterable[str]) -> bool:
+        """Return True if any keyword appears in string args."""
         lowered_keywords = [value.lower() for value in keywords if value]
         if not lowered_keywords:
             return False
@@ -101,6 +114,7 @@ class PolicyEngine:
         return False
 
     def _contains_all_true(self, args: Dict[str, Any]) -> bool:
+        """Return True if args include all=true."""
         if "all" not in args:
             return False
         value = args["all"]
@@ -113,6 +127,7 @@ class PolicyEngine:
         return False
 
     def _iter_string_values(self, payload: Any) -> Iterable[str]:
+        """Yield all string values from nested structures."""
         if isinstance(payload, str):
             yield payload
             return

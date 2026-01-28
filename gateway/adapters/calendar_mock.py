@@ -22,6 +22,7 @@ class CalendarMockAdapter:
         self._event_counter = 1
 
     def spec(self) -> ToolSpec:
+        """Return the tool specification for the calendar adapter."""
         return ToolSpec(
             tool_name="calendar",
             description="Deterministic mock calendar adapter.",
@@ -36,9 +37,11 @@ class CalendarMockAdapter:
         )
 
     def supports_scope(self, scope: str) -> bool:
+        """Return True if the scope is supported."""
         return scope in self.spec().read_scopes
 
     def execute(self, request: ToolRequest, scope: Optional[str]) -> ToolResult:
+        """Dispatch the requested action."""
         if request.tool_action == "get_free_busy":
             return self._get_free_busy()
         if request.tool_action == "list_events":
@@ -56,10 +59,12 @@ class CalendarMockAdapter:
         )
 
     def _get_free_busy(self) -> ToolResult:
+        """Return time blocks for all events."""
         blocks = [self._free_busy_block(event) for event in self._events]
         return ToolResult(ok=True, data={"busy": blocks})
 
     def _list_events(self, scope: Optional[str]) -> ToolResult:
+        """List events with scope-specific detail."""
         scope = scope or self.spec().default_read_scope
         if not self.supports_scope(scope):
             return self._unsupported_scope(scope)
@@ -70,6 +75,7 @@ class CalendarMockAdapter:
         return ToolResult(ok=True, data={"events": events})
 
     def _create_event(self, args: Dict[str, Any]) -> ToolResult:
+        """Create an in-memory calendar event."""
         title = args.get("title") or "Untitled"
         start = args.get("start")
         end = args.get("end")
@@ -94,9 +100,11 @@ class CalendarMockAdapter:
         return ToolResult(ok=True, data={"event_id": event["id"], "status": "created"})
 
     def _free_busy_block(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """Return a minimal time block for an event."""
         return {"start": event["start"], "end": event["end"]}
 
     def _event_metadata(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """Return event metadata for list views."""
         return {
             "id": event["id"],
             "title": event["title"],
@@ -105,6 +113,7 @@ class CalendarMockAdapter:
         }
 
     def _unsupported_scope(self, scope: str) -> ToolResult:
+        """Return an error for unsupported scope requests."""
         return ToolResult(
             ok=False,
             error=ToolError(

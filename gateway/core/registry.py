@@ -32,9 +32,7 @@ class AdapterRegistry:
         spec = adapter.spec()
         tool_name = spec.tool_name
         if tool_name in self._adapters:
-            raise ValueError(
-                f"Tool adapter already registered for '{tool_name}'."
-            )
+            raise ValueError(f"Tool adapter already registered for '{tool_name}'.")
         self._adapters[tool_name] = adapter
 
     def get(self, tool_name: str) -> ToolAdapter:
