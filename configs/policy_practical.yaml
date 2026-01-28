@@ -1,0 +1,38 @@
+profile: practical
+tools:
+  email:
+    read_default_scope: "metadata:last_7_days"
+    safe_writes_without_confirm:
+      - "create_draft"
+    always_confirm_writes:
+      - "send"
+      - "delete"
+      - "update"
+      - "move"
+      - "label"
+    always_confirm_reads_if_broad: true
+  calendar:
+    read_default_scope: "freebusy:last_14_days"
+    safe_writes_without_confirm: []
+    always_confirm_writes:
+      - "create"
+      - "update"
+      - "delete"
+      - "invite"
+      - "respond"
+    always_confirm_reads_if_broad: true
+  files:
+    read_default_scope: "metadata:recent_20"
+    safe_writes_without_confirm: []
+    always_confirm_writes:
+      - "create"
+      - "update"
+      - "delete"
+      - "move"
+      - "rename"
+      - "share"
+      - "permission_change"
+    always_confirm_reads_if_broad: true
+global:
+  broad_read_range_days_threshold: 30
+  broad_read_keywords: ["dump", "all", "everything", "reveal", "secrets"]
